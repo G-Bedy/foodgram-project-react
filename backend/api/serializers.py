@@ -4,7 +4,7 @@ from django.core.files.base import ContentFile
 from rest_framework.fields import IntegerField, SerializerMethodField
 from rest_framework import serializers
 from users.models import CustomUser, Subscriber
-from recipe.models import Tag, Ingredient, Recipe, RecipeIngredient
+from recipe.models import Tag, Ingredient, Recipe, RecipeIngredient, ShoppingCart
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields import fields as extra_fields
 
@@ -177,3 +177,17 @@ class SubscriberSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscriber
         fields = ['user', 'author']
+
+
+class ShoppingCartSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShoppingCart
+        fields = ['user', 'recipe']
+
+
+class RecipeShortSerializer(serializers.ModelSerializer):
+    image = extra_fields.Base64ImageField()
+
+    class Meta:
+        model = Recipe
+        fields = ['id', 'name', 'image', 'cooking_time']

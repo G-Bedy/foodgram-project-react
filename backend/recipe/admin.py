@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Recipe, Tag, Ingredient, RecipeIngredient, RecipeTag
+from .models import Recipe, Tag, Ingredient, RecipeIngredient, RecipeTag, ShoppingCart
 
 
 class RecipeIngredientInline(admin.TabularInline):
@@ -47,3 +47,9 @@ class RecipeIngredientAdmin(admin.ModelAdmin):
     def quantity_with_unit(self, obj):
         return f'{int(obj.amount)} {obj.ingredient.measurement_unit} (а/ов)'
     quantity_with_unit.short_description = 'Количество (ед. изм.)'
+
+
+
+@admin.register(ShoppingCart)
+class ShoppingCartAdmin(admin.ModelAdmin):
+    list_display = ('user', 'recipe')

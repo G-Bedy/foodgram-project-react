@@ -1,10 +1,10 @@
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from users.models import CustomUser, Subscriber
-from recipe.models import Tag, Ingredient, Recipe
+from recipe.models import Tag, Ingredient, Recipe, ShoppingCart, RecipeIngredient
 from .serializers import UserCreateSerializer, TagSerializer, IngredientSerializer, \
     RecipeSerializer, RecipeCreateSerializer, RecipeIngredientSerializer, SubscriberSerializer, \
-    CustomUserSerializer
+    CustomUserSerializer, RecipeShortSerializer
 from rest_framework import filters, status, viewsets
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from djoser.views import UserViewSet as DjoserUserViewSet
@@ -20,6 +20,20 @@ from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from django.views.decorators.http import require_http_methods
+from django.db.models import Sum
+from datetime import datetime
+from django.http import HttpResponse
+
+
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import os
+from collections import Counter
+font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../static/fonts/arial.ttf')
+
 
 
 # class UserViewSet(DjoserUserViewSet):
@@ -94,6 +108,67 @@ class RecipeViewSet(ModelViewSet):
             return RecipeCreateSerializer
         return RecipeSerializer
 
+    @action(detail=True, methods=['POST', 'DELETE'])
+    def shopping_cart(self, request, pk=None):
+        if request.method == 'POST':
+            return self.add_to(ShoppingCart, request.user, pk)
+        return self.delete_from_shopping_cart(ShoppingCart, request.user, pk)
+
+    def add_to(self, model, user, pk):
+        if model.objects.filter(user=user, recipe__id=pk).exists():
+            return Response({'errors': 'Вы уже добавили рецепт в список покупок'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        recipe = get_object_or_404(Recipe, id=pk)
+        model.objects.create(user=user, recipe=recipe)
+        serializer = RecipeShortSerializer(recipe)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def delete_from_shopping_cart(self, model, user, pk):
+        obj = model.objects.filter(user=user, recipe__id=pk)
+        if obj.exists():
+            obj.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({'errors': 'Рецепт уже удален или Вы не добавляли его в список покупок'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    from django.db.models import Sum
+
+    @action(detail=False)
+    def download_shopping_cart(self, request):
+        user = request.user
+        recipes = (
+            ShoppingCart.objects
+                .filter(user=user)
+                .values('recipe__ingredients__name')
+                .annotate(amount=Sum('recipe__recipeingredient__amount'))
+        )
+
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="shopping_cart.pdf"'
+
+        buffer = BytesIO()
+        pdf = canvas.Canvas(buffer, pagesize=letter)
+
+        pdfmetrics.registerFont(TTFont('Arial', font_path))
+        pdf.setFont('Arial', 12)
+
+        y = 700
+        for recipe in recipes:
+            ingredient = recipe['recipe__ingredients__name']
+            amount = recipe['amount']
+            ingredient_line = f"{ingredient} — {amount}"
+            pdf.drawString(100, y, ingredient_line)
+            y -= 20
+
+        pdf.showPage()
+        pdf.save()
+
+        pdf_buffer = buffer.getvalue()
+        buffer.close()
+        response.write(pdf_buffer)
+
+        return response
+
 
 class SubscriberViewSet(viewsets.ModelViewSet):
     queryset = Subscriber.objects.all()
@@ -101,35 +176,3 @@ class SubscriberViewSet(viewsets.ModelViewSet):
 
 
 
-# class TagViewSet(viewsets.ModelViewSet):
-# class TagViewSet(ListView):
-#     queryset = Tag.objects.all()
-#     serializer_class = TagSerializer
-    # permission_classes = (AdminOrReadOnly,)
-    # pagination_class = LimitOffsetPagination
-    # filter_backends = (filters.SearchFilter,)
-    # search_fields = ('name',)
-    # lookup_field = 'slug'
-
-# from rest_framework import viewsets
-# from rest_framework.decorators import action
-# from rest_framework.response import Response
-# from rest_framework.permissions import IsAuthenticated, AllowAny
-# from users.models import CustomUser
-# from .serializers import UserSerializer
-# from djoser.views import UserViewSet
-
-# class UserViewSet(viewsets.ModelViewSet):
-#     queryset = CustomUser.objects.all()
-#     serializer_class = UserSerializer
-#     permission_classes = [IsAuthenticated]
-#
-#     def get_permissions(self):
-#         if self.action == 'create':
-#             return [AllowAny()]
-#         return [IsAuthenticated()]
-#
-#     @action(detail=False, methods=['get'])
-#     def me(self, request):
-#         serializer = self.get_serializer(request.user)
-#         return Response(serializer.data)

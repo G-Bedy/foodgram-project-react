@@ -1,9 +1,11 @@
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.contrib.auth.models import User
 from slugify import slugify
 from django.core.validators import RegexValidator
 
+CustomUser = get_user_model()
 
 class Tag(models.Model):
     name = models.CharField(max_length=200, unique=True, verbose_name="название")
@@ -96,3 +98,15 @@ class RecipeIngredient(models.Model):
     class Meta:
         verbose_name = "Ингредиент рецепта"
         verbose_name_plural = "Ингредиенты рецепта"
+
+
+class ShoppingCart(models.Model):
+    user = models.ForeignKey(CustomUser, related_name='shopping_cart', on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, related_name='shopping_cart', on_delete=models.CASCADE, verbose_name="рецепты")
+
+    def __str__(self):
+        return f"Список покупок для пользователя {self.user.username}"
+
+    class Meta:
+        verbose_name = 'Корзина покупок'
+        verbose_name_plural = 'Корзина покупок'
