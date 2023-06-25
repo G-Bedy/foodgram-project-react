@@ -52,7 +52,6 @@ class Ingredient(models.Model):
 
     def __str__(self):
         return f'{self.name} ({self.measurement_unit})'
-        # return f'{self.name}'
 
     class Meta:
         unique_together = ('name', 'measurement_unit')
@@ -63,7 +62,6 @@ class Ingredient(models.Model):
 class RecipeTag(models.Model):
     recipe = models.ForeignKey('Recipe', on_delete=models.CASCADE, verbose_name="рецепт")
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, verbose_name="тег")
-    # quantity = models.DecimalField(max_digits=6, decimal_places=2, verbose_name="количество")
 
     class Meta:
         verbose_name = "Тег рецепта"

@@ -24,7 +24,6 @@ from django.db.models import Sum
 from datetime import datetime
 from django.http import HttpResponse
 
-
 from io import BytesIO
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -32,8 +31,9 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import os
 from collections import Counter
-font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../static/fonts/arial.ttf')
+from datetime import date
 
+font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../static/fonts/arial.ttf')
 
 
 # class UserViewSet(DjoserUserViewSet):
@@ -46,7 +46,7 @@ class UserViewSet(DjoserUserViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
-        if self.action in ['create']: #, 'me']:
+        if self.action in ['create']:  # , 'me']:
             return UserCreateSerializer
         return CustomUserSerializer
 
@@ -83,7 +83,6 @@ class TagViewSet(ModelViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Tag.DoesNotExist:
             raise NotFound(detail="Страница не найдена.")
-
 
 
 class IngredientViewSet(ModelViewSet):
@@ -139,12 +138,14 @@ class RecipeViewSet(ModelViewSet):
         recipes = (
             ShoppingCart.objects
                 .filter(user=user)
-                .values('recipe__ingredients__name')
+                .values('recipe__ingredients__name', 'recipe__ingredients__measurement_unit')
                 .annotate(amount=Sum('recipe__recipeingredient__amount'))
         )
 
         response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="shopping_cart.pdf"'
+        username = user.username.replace(' ', '_')
+        filename = f'{username}_shopping_cart.pdf'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
         buffer = BytesIO()
         pdf = canvas.Canvas(buffer, pagesize=letter)
@@ -152,13 +153,22 @@ class RecipeViewSet(ModelViewSet):
         pdfmetrics.registerFont(TTFont('Arial', font_path))
         pdf.setFont('Arial', 12)
 
+        # Оглавление
+        pdf.drawString(100, 750, f"Список покупок для {username}")
+        pdf.drawString(100, 730, f"Дата: {date.today().strftime('%Y-%m-%d')}")
+
+        # Список ингредиентов
         y = 700
         for recipe in recipes:
             ingredient = recipe['recipe__ingredients__name']
             amount = recipe['amount']
-            ingredient_line = f"{ingredient} — {amount}"
+            measurement_unit = recipe['recipe__ingredients__measurement_unit']
+            ingredient_line = f"{ingredient} — {amount} ({measurement_unit})"
             pdf.drawString(100, y, ingredient_line)
             y -= 20
+
+        y -= 20
+        pdf.drawString(100, y, "from Foodgram")
 
         pdf.showPage()
         pdf.save()
@@ -173,6 +183,3 @@ class RecipeViewSet(ModelViewSet):
 class SubscriberViewSet(viewsets.ModelViewSet):
     queryset = Subscriber.objects.all()
     serializer_class = SubscriberSerializer
-
-
-
