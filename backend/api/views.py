@@ -1,40 +1,32 @@
 import os
-from collections import Counter
-from datetime import date, datetime
+from datetime import date
 from io import BytesIO
 
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from django.views.decorators.http import require_http_methods
-from django.views.generic import ListView
 from django_filters.rest_framework import DjangoFilterBackend
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
-from rest_framework import filters, status, viewsets
+from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotFound
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet, ViewSet
+from rest_framework.viewsets import ModelViewSet
 
-from recipe.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                           ShoppingCart, Tag)
-from users.models import CustomUser, Subscribe
+from recipe.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 
 from .filters import IngredientFilter, RecipeFilter
-from .mixins import CreateDeleteListViewSet
 from .pagination import CustomPagination
 from .permissions import IsAdminOrReadOnly, IsAuthorOrReadOnly
-from .serializers import (CustomUserSerializer, IngredientSerializer,
-                          RecipeCreateSerializer, RecipeIngredientSerializer,
+from .serializers import (IngredientSerializer, RecipeCreateSerializer,
                           RecipeSerializer, RecipeShortSerializer,
-                          SubscribeSerializer, TagSerializer,
-                          UserCreateSerializer)
+                          TagSerializer)
 
-font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../static/fonts/arial.ttf')
+font_path = os.path.join(os.path.dirname(
+    os.path.abspath(__file__)), '../static/fonts/arial.ttf')
 
 
 class TagViewSet(ModelViewSet):
@@ -65,7 +57,11 @@ class RecipeViewSet(ModelViewSet):
             return RecipeCreateSerializer
         return RecipeSerializer
 
-    @action(detail=True, methods=['POST', 'DELETE'], permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=['POST', 'DELETE'],
+        permission_classes=[IsAuthenticated]
+    )
     def shopping_cart(self, request, pk=None):
         if request.method == 'POST':
             return self.add_to(ShoppingCart, request.user, pk)
@@ -73,8 +69,10 @@ class RecipeViewSet(ModelViewSet):
 
     def add_to(self, model, user, pk):
         if model.objects.filter(user=user, recipe__id=pk).exists():
-            return Response({'errors': 'Вы уже добавили рецепт в список покупок'},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'errors': 'Вы уже добавили рецепт в список покупок'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         recipe = get_object_or_404(Recipe, id=pk)
         model.objects.create(user=user, recipe=recipe)
         serializer = RecipeShortSerializer(recipe)
@@ -85,8 +83,10 @@ class RecipeViewSet(ModelViewSet):
         if obj.exists():
             obj.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response({'errors': 'Рецепт уже удален или Вы не добавляли его в список покупок'},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'errors': 'Рецепт удален или не был добавлен в список покупок'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     from django.db.models import Sum
 
@@ -95,9 +95,12 @@ class RecipeViewSet(ModelViewSet):
         user = request.user
         recipes = (
             ShoppingCart.objects
-                .filter(user=user)
-                .values('recipe__ingredients__name', 'recipe__ingredients__measurement_unit')
-                .annotate(amount=Sum('recipe__recipeingredient__amount'))
+            .filter(user=user)
+            .values(
+                'recipe__ingredients__name',
+                'recipe__ingredients__measurement_unit'
+            )
+            .annotate(amount=Sum('recipe__recipeingredient__amount'))
         )
 
         response = HttpResponse(content_type='application/pdf')
@@ -137,23 +140,35 @@ class RecipeViewSet(ModelViewSet):
 
         return response
 
-    @action(detail=True, methods=['post', 'delete'], permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=['post', 'delete'],
+        permission_classes=[IsAuthenticated]
+    )
     def favorite(self, request, pk):
         recipe = self.get_object()
         user = request.user
 
         if request.method == 'POST':
-            favorite, created = Favorite.objects.get_or_create(user=user, recipe=recipe)
+            favorite, created = Favorite.objects.get_or_create(
+                user=user, recipe=recipe)
             if created:
                 serializer = RecipeShortSerializer(recipe)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(
+                    serializer.data,
+                    status=status.HTTP_201_CREATED
+                )
             else:
-                return Response({'message': 'Рецепт уже находится в избранном.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {'message': 'Рецепт уже находится в избранном.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         try:
             favorite = Favorite.objects.get(user=user, recipe=recipe)
             favorite.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-            # return Response({'message': 'Рецепт удален из избранного.'})
         except Favorite.DoesNotExist:
-            return Response({'message': 'Рецепт не находится в избранном.'}, status=status.HTTP_400_BAD_REQUEST)
-
+            return Response(
+                {'message': 'Рецепт не находится в избранном.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )

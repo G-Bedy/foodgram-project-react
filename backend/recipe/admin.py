@@ -9,9 +9,11 @@ class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
     extra = 1
 
+
 class RecipeTagInline(admin.TabularInline):
     model = RecipeTag
     extra = 1
+
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
@@ -44,7 +46,6 @@ class RecipeIngredientAdmin(admin.ModelAdmin):
     def quantity_with_unit(self, obj):
         return f'{int(obj.amount)} {obj.ingredient.measurement_unit} (а/ов)'
     quantity_with_unit.short_description = 'Количество (ед. изм.)'
-
 
 
 @admin.register(ShoppingCart)

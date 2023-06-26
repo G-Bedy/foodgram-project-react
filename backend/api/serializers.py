@@ -1,22 +1,14 @@
-import base64
-
 from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import make_password
-from django.core.files.base import ContentFile
 from django.db.models import F
-from django.shortcuts import get_object_or_404
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields import fields as extra_fields
-from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import IntegerField, SerializerMethodField
-from rest_framework.relations import PrimaryKeyRelatedField
-from rest_framework.serializers import ModelSerializer
 
 from recipe.models import (Ingredient, Recipe, RecipeIngredient, ShoppingCart,
                            Tag)
-from users.models import CustomUser, Subscribe
+from users.models import Subscribe
 
 User = get_user_model()
 
@@ -51,8 +43,6 @@ class CustomUserSerializer(UserSerializer):
         return Subscribe.objects.filter(user=user, author=obj).exists()
 
 
-
-
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
@@ -64,7 +54,6 @@ class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
         fields = ['id', 'name', 'measurement_unit']
-
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
@@ -98,7 +87,6 @@ class RecipeSerializer(serializers.ModelSerializer):
             'cooking_time',
         )
 
-
     def get_ingredients(self, obj):
         recipe = obj
         ingredients = recipe.ingredients.values(
@@ -122,16 +110,18 @@ class RecipeSerializer(serializers.ModelSerializer):
         return user.shopping_cart.filter(recipe=obj).exists()
 
 
-
 class RecipeCreateSerializer(serializers.ModelSerializer):
-    tags = serializers.PrimaryKeyRelatedField(many=True, queryset=Tag.objects.all())
+    tags = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Tag.objects.all())
     ingredients = RecipeIngredientSerializer(many=True)
     author = UserCreateSerializer(many=False, read_only=True)
-    image = extra_fields.Base64ImageField(write_only=True)  # Используйте Base64ImageField из drf_extra_fields
+    # Используйте Base64ImageField из drf_extra_fields
+    image = extra_fields.Base64ImageField(write_only=True)
 
     class Meta:
         model = Recipe
-        fields = ('id', 'tags', 'author', 'ingredients', 'name', 'image', 'text', 'cooking_time')
+        fields = ('id', 'tags', 'author', 'ingredients',
+                  'name', 'image', 'text', 'cooking_time')
 
     def create_ingredients_amounts(self, ingredients, recipe):
         RecipeIngredient.objects.bulk_create(
@@ -149,22 +139,22 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         tags_data = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
 
-        instance = Recipe.objects.create(author_id=current_user_id, image=image, **validated_data)
+        instance = Recipe.objects.create(
+            author_id=current_user_id, image=image, **validated_data)
         instance.tags.set(tags_data)  # Добавление связанных тегов
         self.create_ingredients_amounts(recipe=instance,
                                         ingredients=ingredients)
         return instance
 
-
     def update(self, instance, validated_data):
         if 'tags' in validated_data:
             tags_data = validated_data.pop('tags')
             instance.tags.set(tags_data)
-        ingredients = validated_data.pop('ingredients')
 
         instance.name = validated_data.get('name', instance.name)
         instance.text = validated_data.get('text', instance.text)
-        instance.cooking_time = validated_data.get('cooking_time', instance.cooking_time)
+        instance.cooking_time = validated_data.get(
+            'cooking_time', instance.cooking_time)
 
         if 'image' in validated_data:
             instance.image = validated_data['image']
