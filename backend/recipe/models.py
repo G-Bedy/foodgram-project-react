@@ -132,4 +132,3 @@ class Favorite(models.Model):
             UniqueConstraint(fields=['user', 'recipe'],
                              name='unique_favourite')
         ]
-
