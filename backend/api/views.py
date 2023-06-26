@@ -1,113 +1,71 @@
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from users.models import CustomUser, Subscriber
-from recipe.models import Tag, Ingredient, Recipe, ShoppingCart, RecipeIngredient
-from .serializers import UserCreateSerializer, TagSerializer, IngredientSerializer, \
-    RecipeSerializer, RecipeCreateSerializer, RecipeIngredientSerializer, SubscriberSerializer, \
-    CustomUserSerializer, RecipeShortSerializer
-from rest_framework import filters, status, viewsets
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from djoser.views import UserViewSet as DjoserUserViewSet
-from django.views.generic import ListView
-from .mixins import CreateDeleteListViewSet
-from rest_framework.viewsets import ViewSet, ModelViewSet
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.exceptions import NotFound
-from django.shortcuts import get_object_or_404
-from rest_framework import status
-from rest_framework.exceptions import NotFound
-from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet
-from django.views.decorators.http import require_http_methods
-from django.db.models import Sum
-from datetime import datetime
-from django.http import HttpResponse
-
-from io import BytesIO
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 import os
 from collections import Counter
-from datetime import date
+from datetime import date, datetime
+from io import BytesIO
+
+from django.db.models import Sum
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_http_methods
+from django.views.generic import ListView
+from django_filters.rest_framework import DjangoFilterBackend
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet, ViewSet
+
+from recipe.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                           ShoppingCart, Tag)
+from users.models import CustomUser, Subscribe
+
+from .filters import IngredientFilter, RecipeFilter
+from .mixins import CreateDeleteListViewSet
+from .pagination import CustomPagination
+from .permissions import IsAdminOrReadOnly, IsAuthorOrReadOnly
+from .serializers import (CustomUserSerializer, IngredientSerializer,
+                          RecipeCreateSerializer, RecipeIngredientSerializer,
+                          RecipeSerializer, RecipeShortSerializer,
+                          SubscribeSerializer, TagSerializer,
+                          UserCreateSerializer)
 
 font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../static/fonts/arial.ttf')
-
-
-# class UserViewSet(DjoserUserViewSet):
-#     queryset = CustomUser.objects.all()
-#     serializer_class = UserSerializer
-#     permission_classes = [IsAuthenticated]
-
-class UserViewSet(DjoserUserViewSet):
-    queryset = CustomUser.objects.all()
-    permission_classes = [IsAuthenticated]
-
-    def get_serializer_class(self):
-        if self.action in ['create']:  # , 'me']:
-            return UserCreateSerializer
-        return CustomUserSerializer
-
-    # @action(detail=False, methods=['get'])
-    # def me(self, request, *args, **kwargs):
-    #     serializer = UserSerializer(request.user)
-    #     return Response(serializer.data)
-
-    # def get_permissions(self):
-    #     if self.action == 'create':
-    #         return [AllowAny()]
-    #     return super().get_permissions()
-
-    # @action(detail=False, methods=['get'])
-    # def me(self, request):
-    #     serializer = self.get_serializer(request.user)
-    #     return Response(serializer.data)
 
 
 class TagViewSet(ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
+    permission_classes = (IsAdminOrReadOnly,)
     http_method_names = ['get']
-
-    # def list(self, request):
-    #     tags = Tag.objects.all()
-    #     serializer = TagSerializer(tags, many=True)
-    #     return Response(serializer.data, status=status.HTTP_200_OK)
-
-    def retrieve(self, request, pk=None):
-        try:
-            tag = Tag.objects.get(pk=pk)
-            serializer = TagSerializer(tag)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Tag.DoesNotExist:
-            raise NotFound(detail="Страница не найдена.")
 
 
 class IngredientViewSet(ModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
+    permission_classes = (IsAdminOrReadOnly,)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = IngredientFilter
     http_method_names = ['get']
-
-    def retrieve(self, request, pk=None):
-        try:
-            ingredient = Ingredient.objects.get(pk=pk)
-            serializer = IngredientSerializer(ingredient)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Ingredient.DoesNotExist:
-            raise NotFound(detail="Страница не найдена.")
 
 
 class RecipeViewSet(ModelViewSet):
     queryset = Recipe.objects.all()
+    permission_classes = (IsAuthorOrReadOnly | IsAdminOrReadOnly,)
+    pagination_class = CustomPagination
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = RecipeFilter
 
     def get_serializer_class(self):
         if self.request.method in ('POST', 'PATCH', 'DELETE'):
             return RecipeCreateSerializer
         return RecipeSerializer
 
-    @action(detail=True, methods=['POST', 'DELETE'])
+    @action(detail=True, methods=['POST', 'DELETE'], permission_classes=[IsAuthenticated])
     def shopping_cart(self, request, pk=None):
         if request.method == 'POST':
             return self.add_to(ShoppingCart, request.user, pk)
@@ -132,7 +90,7 @@ class RecipeViewSet(ModelViewSet):
 
     from django.db.models import Sum
 
-    @action(detail=False)
+    @action(detail=False, permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
         user = request.user
         recipes = (
@@ -179,7 +137,23 @@ class RecipeViewSet(ModelViewSet):
 
         return response
 
+    @action(detail=True, methods=['post', 'delete'], permission_classes=[IsAuthenticated])
+    def favorite(self, request, pk):
+        recipe = self.get_object()
+        user = request.user
 
-class SubscriberViewSet(viewsets.ModelViewSet):
-    queryset = Subscriber.objects.all()
-    serializer_class = SubscriberSerializer
+        if request.method == 'POST':
+            favorite, created = Favorite.objects.get_or_create(user=user, recipe=recipe)
+            if created:
+                serializer = RecipeShortSerializer(recipe)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response({'message': 'Рецепт уже находится в избранном.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            favorite = Favorite.objects.get(user=user, recipe=recipe)
+            favorite.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+            # return Response({'message': 'Рецепт удален из избранного.'})
+        except Favorite.DoesNotExist:
+            return Response({'message': 'Рецепт не находится в избранном.'}, status=status.HTTP_400_BAD_REQUEST)
+

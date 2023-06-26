@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import Recipe, Tag, Ingredient, RecipeIngredient, RecipeTag, ShoppingCart
+from django.contrib.admin import display
+
+from .models import (Favorite, Ingredient, Recipe, RecipeIngredient, RecipeTag,
+                     ShoppingCart, Tag)
 
 
 class RecipeIngredientInline(admin.TabularInline):
@@ -12,19 +15,14 @@ class RecipeTagInline(admin.TabularInline):
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'author')
-    list_filter = ('author', 'name', 'tags')
+    list_display = ('name', 'id', 'author', 'added_in_favorite')
+    readonly_fields = ('added_in_favorite',)
+    list_filter = ('author', 'name', 'tags',)
     inlines = (RecipeIngredientInline, RecipeTagInline,)
 
-    # def get_queryset(self, request):
-    #     queryset = super().get_queryset(request)
-    #     queryset = queryset.annotate(_favorite_count=models.Count('favorite', distinct=True))
-    #     return queryset
-
-    # def favorite_count(self, obj):
-    #     return obj._favorite_count
-
-    # favorite_count.short_description = 'Number of times added to favorites'
+    @display(description='Количество в избранных')
+    def added_in_favorite(self, obj):
+        return obj.favorite.count()
 
 
 @admin.register(Tag)
@@ -41,7 +39,6 @@ class IngredientAdmin(admin.ModelAdmin):
 
 @admin.register(RecipeIngredient)
 class RecipeIngredientAdmin(admin.ModelAdmin):
-    # list_display = ('recipe', 'ingredient', 'quantity')
     list_display = ('recipe', 'ingredient', 'quantity_with_unit')
 
     def quantity_with_unit(self, obj):
@@ -52,4 +49,9 @@ class RecipeIngredientAdmin(admin.ModelAdmin):
 
 @admin.register(ShoppingCart)
 class ShoppingCartAdmin(admin.ModelAdmin):
-    list_display = ('user', 'recipe')
+    list_display = ('id', 'user', 'recipe')
+
+
+@admin.register(Favorite)
+class FavoriteAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'recipe')
