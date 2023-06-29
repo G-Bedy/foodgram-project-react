@@ -25,24 +25,38 @@ from .serializers import (IngredientSerializer, RecipeCreateSerializer,
                           RecipeSerializer, RecipeShortSerializer,
                           TagSerializer)
 
+from rest_framework.mixins import RetrieveModelMixin, ListModelMixin
+from rest_framework.viewsets import GenericViewSet
+
 font_path = os.path.join(os.path.dirname(
     os.path.abspath(__file__)), '../static/fonts/arial.ttf')
 
 
-class TagViewSet(ModelViewSet):
+class BaseViewSet(RetrieveModelMixin, ListModelMixin, GenericViewSet):
+    permission_classes = (IsAdminOrReadOnly,)
+    http_method_names = ['get']
+
+
+class TagViewSet(BaseViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = (IsAdminOrReadOnly,)
-    http_method_names = ['get']
+    # permission_classes = (IsAdminOrReadOnly,)
+    # http_method_names = ['get']
+
+# class TagViewSet(ModelViewSet):
+#     queryset = Tag.objects.all()
+#     serializer_class = TagSerializer
+#     permission_classes = (IsAdminOrReadOnly,)
+#     http_method_names = ['get']
 
 
-class IngredientViewSet(ModelViewSet):
+class IngredientViewSet(BaseViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    permission_classes = (IsAdminOrReadOnly,)
+    # permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = IngredientFilter
-    http_method_names = ['get']
+    # http_method_names = ['get']
 
 
 class RecipeViewSet(ModelViewSet):

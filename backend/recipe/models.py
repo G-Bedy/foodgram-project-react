@@ -3,6 +3,8 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import UniqueConstraint
 from slugify import slugify
+from colorfield.fields import ColorField
+from django.core.validators import MinValueValidator
 
 CustomUser = get_user_model()
 
@@ -12,16 +14,9 @@ class Tag(models.Model):
         max_length=200, unique=True,
         verbose_name="название"
     )
-    color = models.CharField(
-        max_length=7,
+    color = ColorField(
         unique=True,
-        verbose_name="цвет",
-        validators=[
-            RegexValidator(
-                regex=r'^#[A-Fa-f0-9]{6}$',
-                message="Цвет должен быть в формате HEX, например, '#E26C2D'."
-            )
-        ]
+        verbose_name="цвет"
     )
     slug = models.SlugField(
         max_length=200,
@@ -93,18 +88,21 @@ class Recipe(models.Model):
     )
     name = models.CharField(
         max_length=100,
-        verbose_name="название"
+        verbose_name="название",
+        blank=False
     )
     image = models.ImageField(
         upload_to='recipes/',
-        verbose_name="изображение"
+        verbose_name="изображение",
+        blank=False
     )
-    text = models.TextField(verbose_name="описание")
+    text = models.TextField(verbose_name="описание", blank=False)
     ingredients = models.ManyToManyField(
         Ingredient,
         through='RecipeIngredient',
         verbose_name="ингредиенты",
-        related_name='recipes'
+        related_name='recipes',
+        blank=False
     )
     tags = models.ManyToManyField(
         Tag,
@@ -112,7 +110,12 @@ class Recipe(models.Model):
         verbose_name="теги"
     )
     cooking_time = models.PositiveSmallIntegerField(
-        verbose_name="время приготовления")
+        verbose_name="время приготовления",
+        help_text="Введите время приготовления в минутах.",
+        validators=[
+            MinValueValidator(1, message="Время приготовления должно быть больше 0.")
+        ]
+    )
 
     class Meta:
         ordering = ['-id']

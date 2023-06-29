@@ -5,6 +5,9 @@ from drf_extra_fields import fields as extra_fields
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import IntegerField, SerializerMethodField
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
+from django.shortcuts import get_object_or_404
 
 from recipe.models import (Ingredient, Recipe, RecipeIngredient, ShoppingCart,
                            Tag)
@@ -115,7 +118,6 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         many=True, queryset=Tag.objects.all())
     ingredients = RecipeIngredientSerializer(many=True)
     author = UserCreateSerializer(many=False, read_only=True)
-    # Используйте Base64ImageField из drf_extra_fields
     image = extra_fields.Base64ImageField(write_only=True)
 
     class Meta:
@@ -123,42 +125,83 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         fields = ('id', 'tags', 'author', 'ingredients',
                   'name', 'image', 'text', 'cooking_time')
 
+    def validate_ingredients(self, value):
+        ingredients = value
+        if not ingredients:
+            raise ValidationError({
+                'ingredients': 'Нужен хотя бы один ингредиент!'
+            })
+        ingredients_list = []
+        for item in ingredients:
+            ingredient = get_object_or_404(Ingredient, id=item['id'])
+            if ingredient in ingredients_list:
+                raise ValidationError({
+                    'ingredients': 'Ингридиенты не могут повторяться!'
+                })
+            if int(item['amount']) <= 0:
+                raise ValidationError({
+                    'amount': 'Количество ингредиента должно быть больше 0!'
+                })
+            ingredients_list.append(ingredient)
+        return value
+
+    def validate_tags(self, value):
+        tags = value
+        if not tags:
+            raise ValidationError({
+                'tags': 'Нужно выбрать хотя бы один тег!'
+            })
+        tags_list = []
+        for tag in tags:
+            if tag in tags_list:
+                raise ValidationError({
+                    'tags': 'Теги должны быть уникальными!'
+                })
+            tags_list.append(tag)
+        return value
+
     def create_ingredients_amounts(self, ingredients, recipe):
+        ingredient_ids = [ingredient['id'] for ingredient in ingredients]
+        existing_ingredients = Ingredient.objects.filter(id__in=ingredient_ids)
+        existing_ingredient_ids = [ingredient.id for ingredient in existing_ingredients]
+
+        for ingredient in ingredients:
+            if ingredient['id'] not in existing_ingredient_ids:
+                error_message = f"Ингредиент с ID {ingredient['id']} не найден в базе данных."
+                raise serializers.ValidationError(error_message)
+
         RecipeIngredient.objects.bulk_create(
             [RecipeIngredient(
-                ingredient=Ingredient.objects.get(id=ingredient['id']),
+                ingredient=existing_ingredients.get(id=ingredient['id']),
                 recipe=recipe,
                 amount=ingredient['amount']
             ) for ingredient in ingredients]
         )
 
+    @transaction.atomic
     def create(self, validated_data):
-        image = validated_data.pop('image')
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
         current_user_id = self.context['request'].user.id
 
-        tags_data = validated_data.pop('tags')
-        ingredients = validated_data.pop('ingredients')
+        recipe = Recipe.objects.create(author_id=current_user_id, **validated_data)
+        recipe.tags.set(tags)
+        self.create_ingredients_amounts(
+            recipe=recipe,
+            ingredients=ingredients
+        )
+        return recipe
 
-        instance = Recipe.objects.create(
-            author_id=current_user_id, image=image, **validated_data)
-        instance.tags.set(tags_data)  # Добавление связанных тегов
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
+        instance = super().update(instance, validated_data)
+        instance.tags.clear()
+        instance.tags.set(tags)
+        instance.ingredients.clear()
         self.create_ingredients_amounts(recipe=instance,
                                         ingredients=ingredients)
-        return instance
-
-    def update(self, instance, validated_data):
-        if 'tags' in validated_data:
-            tags_data = validated_data.pop('tags')
-            instance.tags.set(tags_data)
-
-        instance.name = validated_data.get('name', instance.name)
-        instance.text = validated_data.get('text', instance.text)
-        instance.cooking_time = validated_data.get(
-            'cooking_time', instance.cooking_time)
-
-        if 'image' in validated_data:
-            instance.image = validated_data['image']
-
         instance.save()
         return instance
 
