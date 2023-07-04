@@ -1,13 +1,12 @@
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.models import F
+from django.shortcuts import get_object_or_404
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields import fields as extra_fields
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import IntegerField, SerializerMethodField
-from django.core.exceptions import ObjectDoesNotExist
-from django.db import transaction
-from django.shortcuts import get_object_or_404
 
 from recipe.models import (Ingredient, Recipe, RecipeIngredient, ShoppingCart,
                            Tag)
@@ -163,11 +162,14 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     def create_ingredients_amounts(self, ingredients, recipe):
         ingredient_ids = [ingredient['id'] for ingredient in ingredients]
         existing_ingredients = Ingredient.objects.filter(id__in=ingredient_ids)
-        existing_ingredient_ids = [ingredient.id for ingredient in existing_ingredients]
+        existing_ingredient_ids = [
+            ingredient.id for ingredient in existing_ingredients
+        ]
 
         for ingredient in ingredients:
             if ingredient['id'] not in existing_ingredient_ids:
-                error_message = f"Ингредиент с ID {ingredient['id']} не найден в базе данных."
+                error_message = f"Ингредиент с ID {ingredient['id']}" \
+                                f" не найден в базе данных."
                 raise serializers.ValidationError(error_message)
 
         RecipeIngredient.objects.bulk_create(
@@ -184,7 +186,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         ingredients = validated_data.pop('ingredients')
         current_user_id = self.context['request'].user.id
 
-        recipe = Recipe.objects.create(author_id=current_user_id, **validated_data)
+        recipe = Recipe.objects.create(
+            author_id=current_user_id,
+            **validated_data
+        )
         recipe.tags.set(tags)
         self.create_ingredients_amounts(
             recipe=recipe,

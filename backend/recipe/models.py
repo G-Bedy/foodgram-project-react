@@ -1,10 +1,9 @@
+from colorfield.fields import ColorField
 from django.contrib.auth import get_user_model
-from django.core.validators import RegexValidator
+from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
 from django.db.models import UniqueConstraint
 from slugify import slugify
-from colorfield.fields import ColorField
-from django.core.validators import MinValueValidator
 
 CustomUser = get_user_model()
 
@@ -113,7 +112,10 @@ class Recipe(models.Model):
         verbose_name="время приготовления",
         help_text="Введите время приготовления в минутах.",
         validators=[
-            MinValueValidator(1, message="Время приготовления должно быть больше 0.")
+            MinValueValidator(
+                1,
+                message="Время приготовления должно быть больше 0."
+            )
         ]
     )
 

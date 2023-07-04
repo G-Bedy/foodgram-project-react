@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+
 # load_dotenv()
 
 
@@ -16,21 +17,27 @@ load_dotenv(dotenv_path)
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-xjbmshf-' \
-             '^yh7*gupt1(1_-nd24+s^bn5fegl7#=c+yy!4yucbu'
+SECRET_KEY = 'django-insecure-xjbmshf-^yh7' \
+             '*gupt1(1_-nd24+s^bn5fegl7#=c+yy!4yucbu'
 
 
 # CSRF_TRUSTED_ORIGINS = [os.getenv(
 #     "CSRF_TRUSTED_ORIGINS",
 #     default="http://localhost, https://127.0.0.1",
 # )]
-CSRF_TRUSTED_ORIGINS=["http://158.160.113.160"]
+CSRF_TRUSTED_ORIGINS = ["http://158.160.113.160"]
 # print(CSRF_TRUSTED_ORIGINS)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'backend:8000', 'backend', '158.160.113.160',]
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    'localhost',
+    'backend:8000',
+    'backend',
+    '158.160.113.160'
+]
 
 
 # Application definition
@@ -184,8 +191,6 @@ DJOSER = {
     },
     'HIDE_USERS': False,
 }
-
-
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
