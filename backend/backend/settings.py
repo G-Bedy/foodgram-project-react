@@ -24,13 +24,13 @@ SECRET_KEY = 'django-insecure-xjbmshf-' \
 #     "CSRF_TRUSTED_ORIGINS",
 #     default="http://localhost, https://127.0.0.1",
 # )]
-CSRF_TRUSTED_ORIGINS=["http://localhost"]
+CSRF_TRUSTED_ORIGINS=["http://158.160.113.160"]
 # print(CSRF_TRUSTED_ORIGINS)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'backend:8000', 'backend', '158.160.98.138',]
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'backend:8000', 'backend', '158.160.113.160',]
 
 
 # Application definition
@@ -85,16 +85,16 @@ TEMPLATES = [
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.postgresql'),
-#         'NAME': os.getenv('DB_NAME'),
-#         'USER': os.getenv('POSTGRES_USER'),
-#         'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
-#         'HOST': os.getenv('DB_HOST'),
-#         'PORT': os.getenv('DB_PORT')
-#     }
-# }
+DATABASES = {
+    'default': {
+        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.postgresql'),
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('POSTGRES_USER'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT')
+    }
+}
 # DB_ENGINE = DATABASES['default']['ENGINE']
 # DB_NAME = DATABASES['default']['NAME']
 # POSTGRES_USER = DATABASES['default']['USER']
@@ -108,14 +108,14 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # print(f"POSTGRES_PASSWORD: {POSTGRES_PASSWORD}")
 # print(f"DB_HOST: {DB_HOST}")
 # print(f"DB_PORT: {DB_PORT}")
-#
-#
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
 
 AUTH_USER_MODEL = 'users.CustomUser'
 
