@@ -2,13 +2,15 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+# load_dotenv()
 
-dotenv_path = os.path.join(os.path.dirname(__file__), '../../infra/.env')
-load_dotenv(dotenv_path)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+dotenv_path = os.path.join(BASE_DIR, '../infra/.env')
+# print(f"--------------------------{dotenv_path}")
+load_dotenv(dotenv_path)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -16,6 +18,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-xjbmshf-' \
              '^yh7*gupt1(1_-nd24+s^bn5fegl7#=c+yy!4yucbu'
+
+
+# CSRF_TRUSTED_ORIGINS = [os.getenv(
+#     "CSRF_TRUSTED_ORIGINS",
+#     default="http://localhost, https://127.0.0.1",
+# )]
+CSRF_TRUSTED_ORIGINS=["http://localhost"]
+# print(CSRF_TRUSTED_ORIGINS)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -75,14 +85,35 @@ TEMPLATES = [
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.postgresql'),
+#         'NAME': os.getenv('DB_NAME'),
+#         'USER': os.getenv('POSTGRES_USER'),
+#         'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
+#         'HOST': os.getenv('DB_HOST'),
+#         'PORT': os.getenv('DB_PORT')
+#     }
+# }
+# DB_ENGINE = DATABASES['default']['ENGINE']
+# DB_NAME = DATABASES['default']['NAME']
+# POSTGRES_USER = DATABASES['default']['USER']
+# POSTGRES_PASSWORD = DATABASES['default']['PASSWORD']
+# DB_HOST = DATABASES['default']['HOST']
+# DB_PORT = DATABASES['default']['PORT']
+#
+# print(f"DB_ENGINE: {DB_ENGINE}")
+# print(f"DB_NAME: {DB_NAME}")
+# print(f"POSTGRES_USER: {POSTGRES_USER}")
+# print(f"POSTGRES_PASSWORD: {POSTGRES_PASSWORD}")
+# print(f"DB_HOST: {DB_HOST}")
+# print(f"DB_PORT: {DB_PORT}")
+#
+#
 DATABASES = {
     'default': {
-        'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.postgresql'),
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('POSTGRES_USER'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT')
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
