@@ -3,14 +3,16 @@ version: '3.3'
 services:
 
   db:
+    container_name: foodgram-db
     image: postgres:13.0-alpine
     volumes:
-      - postgres_data:/var/lib/postgresql/data/
+      - postgres_db:/var/lib/postgresql/data/
     env_file:
-      - ./.env
+      - .env
     restart: always
 
   backend:
+    container_name: foodgram-back
     image: elberdg/infra-backend:latest
     restart: always
     volumes:
@@ -20,15 +22,17 @@ services:
     depends_on:
       - db
     env_file:
-      - ./.env
+      - .env
 
   frontend:
+    container_name: foodgram-front
     image: elberdg/infra-frontend:latest
 
     volumes:
       - ../frontend/:/app/result_build/
 
   nginx:
+    container_name: foodgram-nginx
     image: nginx:1.21.3-alpine
     ports:
       - "80:80"
@@ -46,5 +50,5 @@ services:
 volumes:
   static_value:
   media_value:
-  postgres_data:
+  postgres_db:
   redoc:
