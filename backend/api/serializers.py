@@ -130,10 +130,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             raise ValidationError({
                 'ingredients': 'Нужен хотя бы один ингредиент!'
             })
-        ingredients_list = []
+        ingredients_set = set()
         for item in ingredients:
             ingredient = get_object_or_404(Ingredient, id=item['id'])
-            if ingredient in ingredients_list:
+            if ingredient in ingredients_set:
                 raise ValidationError({
                     'ingredients': 'Ингридиенты не могут повторяться!'
                 })
@@ -141,7 +141,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                 raise ValidationError({
                     'amount': 'Количество ингредиента должно быть больше 0!'
                 })
-            ingredients_list.append(ingredient)
+            ingredients_set.add(ingredient)
         return value
 
     def validate_tags(self, value):
@@ -150,26 +150,28 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             raise ValidationError({
                 'tags': 'Нужно выбрать хотя бы один тег!'
             })
-        tags_list = []
+        tags_list = set()
         for tag in tags:
-            if tag in tags_list:
+            if tag in tags_set:
                 raise ValidationError({
                     'tags': 'Теги должны быть уникальными!'
                 })
-            tags_list.append(tag)
+            tags_set.add(tag)
         return value
 
     def create_ingredients_amounts(self, ingredients, recipe):
         ingredient_ids = [ingredient['id'] for ingredient in ingredients]
         existing_ingredients = Ingredient.objects.filter(id__in=ingredient_ids)
-        existing_ingredient_ids = [
-            ingredient.id for ingredient in existing_ingredients
-        ]
+        existing_ingredient_ids = list(
+            existing_ingredients.values_list('id', flat=True)
+        )
 
         for ingredient in ingredients:
             if ingredient['id'] not in existing_ingredient_ids:
-                error_message = f"Ингредиент с ID {ingredient['id']}" \
-                                f" не найден в базе данных."
+                error_message = (
+                    f"Ингредиент с ID {ingredient['id']} "
+                    "не найден в базе данных."
+                )
                 raise serializers.ValidationError(error_message)
 
         RecipeIngredient.objects.bulk_create(

@@ -38,23 +38,13 @@ class BaseViewSet(RetrieveModelMixin, ListModelMixin, GenericViewSet):
 class TagViewSet(BaseViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    # permission_classes = (IsAdminOrReadOnly,)
-    # http_method_names = ['get']
-
-# class TagViewSet(ModelViewSet):
-#     queryset = Tag.objects.all()
-#     serializer_class = TagSerializer
-#     permission_classes = (IsAdminOrReadOnly,)
-#     http_method_names = ['get']
 
 
 class IngredientViewSet(BaseViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    # permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = IngredientFilter
-    # http_method_names = ['get']
 
 
 class RecipeViewSet(ModelViewSet):
